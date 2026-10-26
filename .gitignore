@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.wk1
+*.WK1
+*.wks
+*.csv
+*.xlsx
