@@ -268,6 +268,6 @@ if __name__ == '__main__':
     if getattr(sys, 'frozen', False) and (len(sys.argv) < 2 or code):      # opened by a double click or failed: keep the window
         try:
             input('Press Enter to close ')
-        except EOFError:
+        except (EOFError, RuntimeError):      # no keyboard attached (a script, or a build runner)
             pass
     sys.exit(code)
