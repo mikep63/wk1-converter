@@ -40,4 +40,7 @@ Next: formulas
     the Lotus filter in LibreOffice (sc/source/filter/lotus/, lotform.cxx), which has a function table with counts.
 - Do not finish the decoder until the arities are verified, and test it on at least one real WK1 file that contains formulas.
 
+Windows exe: `build.bat` builds `dist\wk1-converter.exe` with PyInstaller in a local `.venv` (9.4 MB, tested on real files: csv identical to the Python output).
+The exe is not committed; attach it to a GitHub Release. A GitHub Actions workflow on windows-latest that builds and attaches it would make releases reproducible (not written yet).
+
 Do not put third-party data files in the repository (the .gitignore excludes wk1, wks, csv, xlsx).

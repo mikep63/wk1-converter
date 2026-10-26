@@ -8,6 +8,22 @@ python wk1.py in.WK1 out.csv
 python wk1.py in.WK1 out.xlsx
 ```
 
+## Windows program, no Python needed
+
+`wk1-converter.exe` is the same program bundled with its own Python runtime (about 9 MB). Drag one or more `.WK1` files
+onto it, or run it from a command prompt:
+
+```
+wk1-converter in.WK1                  writes in.csv next to it
+wk1-converter in.WK1 out.xlsx
+wk1-converter --xlsx a.WK1 b.WK1
+```
+
+Build it yourself with `build.bat` (needs Python once, on the build machine; it installs PyInstaller and openpyxl into a
+`.venv` folder here and writes `dist\wk1-converter.exe`). The exe is not stored in the repository: download it from the
+Releases page, or build it. Single-file programs made with PyInstaller are sometimes flagged by antivirus software; if
+yours does, build it from the source above.
+
 From Python:
 
 ```python

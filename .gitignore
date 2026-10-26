@@ -5,3 +5,7 @@ __pycache__/
 *.wks
 *.csv
 *.xlsx
+.venv/
+build/
+dist/
+*.spec

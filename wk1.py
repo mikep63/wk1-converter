@@ -3,6 +3,7 @@
 
     python wk1.py in.WK1 out.csv       # stored values; a formula cell gives its last result
     python wk1.py in.WK1 out.xlsx
+    python wk1.py in.WK1               # writes in.csv; several files and --xlsx work too (wk1-converter without arguments shows the list)
 
 A WK1 file is a run of records: a 2-byte opcode and a 2-byte length (little endian), then the data. The cell records are
 0x0C blank, 0x0D integer (int16), 0x0E number (IEEE double), 0x0F label (a prefix character, then text ending in a null),
@@ -11,6 +12,7 @@ Every cell record starts with a format byte, then the column and row (2 bytes ea
 code page Lotus used. Number formats, dates and formulas are not kept, only the values.
 """
 import csv
+import os
 import struct
 import sys
 
@@ -74,9 +76,49 @@ def write(rows, out):
             csv.writer(f).writerows(rows)
 
 
+def convert(src, out=None, fmt='csv'):
+    out = out or os.path.splitext(src)[0] + '.' + fmt
+    g = grid(src)
+    write(g, out)
+    print('%s: %d rows x %d columns -> %s' % (src, len(g), len(g[0]) if g else 0, out))
+    return out
+
+
+USAGE = """wk1-converter: Lotus 1-2-3 .WK1 to csv or xlsx
+
+  wk1-converter in.WK1                  writes in.csv next to it
+  wk1-converter in.WK1 out.xlsx         writes the named file (.csv or .xlsx)
+  wk1-converter --xlsx a.WK1 b.WK1      converts each file to .xlsx next to it
+  wk1-converter a.WK1 b.WK1             converts each file to .csv next to it
+
+You can also drag one or more .WK1 files onto the program.
+"""
+
+
+def main(argv):
+    args = [a for a in argv if not a.startswith('--')]
+    fmt = 'xlsx' if '--xlsx' in argv else 'csv'
+    if not args:
+        print(USAGE)
+        return 2
+    if len(args) == 2 and args[1].lower().endswith(('.csv', '.xlsx')):
+        convert(args[0], args[1])
+        return 0
+    status = 0
+    for src in args:
+        try:
+            convert(src, None, fmt)
+        except (OSError, struct.error) as e:
+            print('%s: %s' % (src, e))
+            status = 1
+    return status
+
+
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        sys.exit(__doc__)
-    g = grid(sys.argv[1])
-    write(g, sys.argv[2])
-    print('%d rows x %d columns -> %s' % (len(g), len(g[0]) if g else 0, sys.argv[2]))
+    code = main(sys.argv[1:])
+    if getattr(sys, 'frozen', False) and (len(sys.argv) < 2 or code):      # opened by a double click or failed: keep the window
+        try:
+            input('Press Enter to close ')
+        except EOFError:
+            pass
+    sys.exit(code)
