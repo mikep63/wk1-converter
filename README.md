@@ -19,7 +19,8 @@ wk1-converter in.WK1 out.xlsx
 wk1-converter --xlsx a.WK1 b.WK1
 ```
 
-Build it yourself with `build.bat` (needs Python once, on the build machine; it installs PyInstaller and openpyxl into a
+The Releases page has a build made by the workflow in `.github/workflows/build.yml` from the code in this
+repository. Build it yourself with `build.bat` (needs Python once, on the build machine; it installs PyInstaller and openpyxl into a
 `.venv` folder here and writes `dist\wk1-converter.exe`). The exe is not stored in the repository: download it from the
 Releases page, or build it. Single-file programs made with PyInstaller are sometimes flagged by antivirus software; if
 yours does, build it from the source above.
@@ -37,10 +38,37 @@ wk1.write(rows, 'out.csv')
 Numbers, integers and text labels, and for a formula cell the result Lotus last stored. Text is decoded as cp437, the
 DOS code page Lotus used. Whole-number floats come back as integers.
 
+## Formulas (experimental)
+
+By default a formula cell gives its stored value. With `--formulas` the formula itself is decoded and written as Excel
+text: a real formula in an xlsx, `=SUM(A1:A3)` text in a csv. A list of every formula (cell, stored value, formula, and why
+any was left as a value) is written next to the output as `<name>.formulas.csv`.
+
+```
+wk1-converter --formulas in.WK1 out.xlsx
+```
+
+It converts only what it is sure of: the operators `+ - * / ^`, the comparisons, `#AND#`, `#OR#`, `#NOT#`, cell and range
+references, and these functions: `@ABS @INT @SQRT @LOG @LN @PI @SIN @COS @TAN @ATAN @ATAN2 @ASIN @ACOS @EXP @MOD @ROUND
+@IF @NA @TRUE @FALSE @RAND @NOW @ISNA @ISERR @DAY @MONTH @YEAR @HOUR @MINUTE @SECOND @LENGTH @VALUE @CHR @ASCII @UPPER
+@LOWER @PROPER @TRIM @REPEAT @LEFT @RIGHT @DATE @TIME @SUM @AVG @CNT @MIN @MAX`. A formula that uses anything else keeps
+its stored value, and the list says why. That includes functions whose Excel version counts from a different base or takes
+its arguments in a different order (`@MID`, `@FIND`, `@VLOOKUP`, `@HLOOKUP`, `@CHOOSE`, `@INDEX`, `@IRR`, `@PMT` and the
+database functions), strings written into a formula, and cell references stored relative to the cell.
+
+Things to know before relying on it:
+
+- It is tested only on files built from the published record layout, because no real Lotus file with formulas has been
+  available to the author. Check the list against your sheet. Reports of real files that fail are welcome.
+- Every operation is parenthesised, so `A1+B1*2` comes out as `A1+(B1*2)`: correct, a little verbose.
+- Lotus comparisons give 1 or 0, Excel gives TRUE or FALSE; Lotus `@COUNT` counts non-blank cells, so it becomes `COUNTA`.
+- Excel recalculates the formulas when the file opens, so the numbers can differ from Lotus's stored results where the two
+  programs differ (rounding, error values, dates before 1900). The list shows the stored value for comparison.
+
 ## What it does not keep
 
-Formulas (only their last result), number formats, dates, column widths, multiple sheets and the older or newer Lotus
-formats (`.WKS`, `.WK3`, `.WK4`). A cell that Lotus left blank is empty in the output.
+Number formats, dates, column widths, multiple sheets and the older or newer Lotus formats (`.WKS`, `.WK3`, `.WK4`). A
+cell that Lotus left blank is empty in the output.
 
 ## Testing
 
@@ -61,7 +89,7 @@ label (a prefix character, then text ending in a null), `0x10` formula (the doub
 
 ## Status
 
-Values only. Reading the formula tokens and saving them as real spreadsheet formulas is planned. See `NOTES.md`.
+Values: tested on real files. Formulas: experimental, see above. `NOTES.md` has the sources and open questions.
 
 ## Licence
 

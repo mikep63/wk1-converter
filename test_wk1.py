@@ -26,6 +26,46 @@ def label(row, col, text):
     return rec(0x0F, struct.pack('<BHH', 0xFF, col, row) + b"'" + text.encode('cp437') + b'\x00')
 
 
+def formula(row, col, value, tokens):
+    body = struct.pack('<BHHdH', 0xFF, col, row, value, len(tokens)) + tokens
+    return rec(0x10, body)
+
+
+def t_ref(col, row):
+    return b'\x01' + struct.pack('<HH', col, row)
+
+
+def t_range(c1, r1, c2, r2):
+    return b'\x02' + struct.pack('<HHHH', c1, r1, c2, r2)
+
+
+def t_int(v):
+    return b'\x05' + struct.pack('<h', v)
+
+
+END = b'\x03'
+
+FORMULAS = [     # (tokens, expected Excel text or None when the formula must keep its value, why)
+    (t_ref(0, 0) + t_ref(1, 0) + t_int(2) + b'\x0b' + b'\x09' + END, '=A1+(B1*2)', ''),
+    (t_range(0, 0, 0, 2) + b'\x50\x01' + END, '=SUM(A1:A3)', ''),
+    (t_ref(0, 0) + t_int(0) + b'\x13' + t_int(1) + t_int(2) + b'\x3b' + END, '=IF(A1>0,1,2)', ''),
+    (t_ref(0, 0) + t_ref(1, 0) + b'\x09' + b'\x08' + t_int(2) + b'\x0b' + END, '=(-(A1+B1))*2', ''),
+    (t_ref(0, 0) + t_ref(1, 0) + b'\x14' + END, '=AND(A1,B1)', ''),
+    (b'\x00' + struct.pack('<d', 2.5) + t_ref(27, 99) + b'\x0c' + END, '=2.5/AB100', ''),
+    (t_int(1) + t_int(2) + t_int(3) + b'\x55' + END, None, 'function 85 not converted'),          # VLOOKUP: not converted
+    (t_ref(0x8001, 0) + t_int(1) + b'\x09' + END, None, 'relative cell reference'),
+    (t_int(1) + b'\x09' + END, None, 'malformed formula'),
+]
+
+
+def formula_sample():
+    parts = [rec(0x0000, struct.pack('<H', 0x0406))]
+    for i, (tokens, _, _) in enumerate(FORMULAS):
+        parts.append(formula(i, 0, 42.0, tokens))
+    parts.append(rec(0x0001))
+    return b''.join(parts)
+
+
 def sample():
     return b''.join([
         rec(0x0000, struct.pack('<H', 0x0406)),          # beginning of file, version
@@ -63,6 +103,21 @@ def main():
             check([[c.value for c in r] for r in ws.iter_rows()] == g, 'xlsx round trip')
         # a truncated file must not raise
         wk1.read_bytes(sample()[:-9])
+        # formulas: values by default, decoded text with the dict, the value kept where a formula is not understood
+        fsrc = os.path.join(d, 'formulas.wk1')
+        open(fsrc, 'wb').write(formula_sample())
+        check(all(row == [42] for row in wk1.grid(fsrc)), 'formula cells give their stored value by default')
+        found = {}
+        g = wk1.grid(fsrc, found)
+        for i, (_, want, why) in enumerate(FORMULAS):
+            text, reason = found[(i, 0)]
+            check(text == want and reason == why, 'formula %d: %r %r, wanted %r %r' % (i, text, reason, want, why))
+            check(g[i][0] == (want if want else 42), 'grid cell %d: %r' % (i, g[i][0]))
+        # the converter writes the list of formulas
+        out2 = os.path.join(d, 'formulas.xlsx')
+        wk1.convert(fsrc, out2, formulas=True)
+        report = open(os.path.join(d, 'formulas.formulas.csv'), encoding='utf-8-sig').read().splitlines()
+        check(len(report) == len(FORMULAS) + 1 and report[1].startswith('A1,42,=A1+(B1*2),'), 'formula list: %r' % (report[:2],))
     print('ok')
 
 

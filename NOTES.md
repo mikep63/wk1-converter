@@ -10,7 +10,7 @@ State
 - The 1998 hitters text has 3 more rows than the WK1 (523 against 520); not investigated.
 - No remote repository yet; nothing published.
 
-Next: formulas
+Formulas (done, experimental)
 - Formula cells (opcode `0x10`) hold the cached double result, a 2-byte length, then a token stream (postfix-style): constants,
   cell references (relative/absolute flags in the high bit), ranges, operators, parentheses, a function table (~100
   functions, some with a count byte). Plan: decode to infix text, write real formulas to xlsx with the cached value, give csv
@@ -38,9 +38,18 @@ Next: formulas
     arguments are followed by a 1-byte count (80 to 84 are named for it); no table of fixed counts was found. Without the arity
     a postfix stream cannot be turned into infix text. Sources to try: the example signatures in WSFF2 (opcodes 31 to 97), and
     the Lotus filter in LibreOffice (sc/source/filter/lotus/, lotform.cxx), which has a function table with counts.
-- Do not finish the decoder until the arities are verified, and test it on at least one real WK1 file that contains formulas.
+- Done (25 Oct 2026): `decode_formula` in `wk1.py` turns the token stream into Excel text and `--formulas` writes it. It converts only
+  functions where the Lotus specification (names, the SUM..MAX count byte) and LibreOffice's Lotus filter (`lotform.cxx`, the
+  argument counts, read through a summarising fetch) agree and where Excel means the same thing. Anything else makes the
+  whole formula "unsupported" and the cell keeps its stored value, with the reason in `<name>.formulas.csv`.
+- Argument counts the sources did not settle, so those functions are left out: VAR and STD (87, 88), the database
+  functions (91 to 97), INDEX (98), CELLPOINTER (79), CELL (108), S and V (111, 112), STREQ (113). The offset-based ones
+  (MID, FIND, VLOOKUP, HLOOKUP, CHOOSE, INDEX) are left out on purpose: Lotus counts from 0, Excel from 1.
+- Cell references with the high bit set (a relative reference) are left unsupported: the public text does not say how they
+  are encoded, so this is the first thing to learn from a real file.
+- Still needed: at least one real WK1 file with formulas, to check the decoder against. Until then it stays experimental.
 
 Windows exe: `build.bat` builds `dist\wk1-converter.exe` with PyInstaller in a local `.venv` (9.4 MB, tested on real files: csv identical to the Python output).
-The exe is not committed; attach it to a GitHub Release. A GitHub Actions workflow on windows-latest that builds and attaches it would make releases reproducible (not written yet).
+The exe is not committed. `.github/workflows/build.yml` runs the tests on every push and, for a tag such as `v0.1.0`, builds the exe on windows-latest and attaches it to the Release. It has not run yet (written 25 Oct 2026); expect to fix a step or two the first time.
 
 Do not put third-party data files in the repository (the .gitignore excludes wk1, wks, csv, xlsx).
