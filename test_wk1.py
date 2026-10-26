@@ -77,6 +77,76 @@ def sample():
     ])
 
 
+class FakeUI:
+    """Stands in for the dialog boxes: answers are given up front, and every message is kept."""
+
+    def __init__(self, files, save=None, folder=None, yes=()):
+        self.files, self.save, self.folder_, self.yes = files, save, folder, list(yes)
+        self.asked, self.infos, self.errors = [], [], []
+
+    def open_files(self):
+        return self.files
+
+    def save_as(self, initialfile):
+        self.asked.append(initialfile)
+        return self.save
+
+    def folder(self):
+        return self.folder_
+
+    def yes_no(self, title, text):
+        self.asked.append(title)
+        return self.yes.pop(0)
+
+    def info(self, text):
+        self.infos.append(text)
+
+    def error(self, text):
+        self.errors.append(text)
+
+
+def check_gui(d):
+    plain, with_f = os.path.join(d, 'plain.wk1'), os.path.join(d, 'withf.wk1')
+    open(plain, 'wb').write(sample())
+    open(with_f, 'wb').write(formula_sample())
+    # one file, no formulas: only the Save As box, named after the file
+    ui = FakeUI([plain], save=os.path.join(d, 'g1.csv'))
+    check(wk1.gui(ui) == 0 and ui.asked == ['plain.csv'] and os.path.exists(os.path.join(d, 'g1.csv')) and ui.infos, 'gui: one file')
+    # formulas found and accepted: asked once, the list is written
+    ui = FakeUI([with_f], save=os.path.join(d, 'g2.xlsx'), yes=[True])
+    check(wk1.gui(ui) == 0 and ui.asked[0] == 'Formulas found' and os.path.exists(os.path.join(d, 'g2.formulas.csv')), 'gui: formulas')
+    # formulas found and declined: values only, no list
+    ui = FakeUI([with_f], save=os.path.join(d, 'g3.csv'), yes=[False])
+    check(wk1.gui(ui) == 0 and not os.path.exists(os.path.join(d, 'g3.formulas.csv')), 'gui: formulas declined')
+    # several files: a folder and an output type
+    os.makedirs(os.path.join(d, 'out'))
+    ui = FakeUI([plain, plain.replace('plain', 'plain')], folder=os.path.join(d, 'out'), yes=[False])
+    check(wk1.gui(ui) == 0 and os.path.exists(os.path.join(d, 'out', 'plain.csv')), 'gui: several files')
+    # cancelling at any box does nothing
+    for ui in (FakeUI([]), FakeUI([plain], save=''), FakeUI([plain, plain], folder='')):
+        check(wk1.gui(ui) == 0 and not ui.infos and not ui.errors, 'gui: cancel')
+    # a file that is not a WK1 file is reported, not raised
+    bad = os.path.join(d, 'bad.wk1')
+    open(bad, 'wb').write(b'not a spreadsheet')
+    ui = FakeUI([bad], save=os.path.join(d, 'g4.csv'))
+    check(wk1.gui(ui) == 1 and ui.errors and 'no cells' in ui.errors[0] and not ui.infos, 'gui: bad file is reported')
+
+
+def check_windowed(d):
+    plain = os.path.join(d, 'win.wk1')
+    open(plain, 'wb').write(sample())
+    bad = os.path.join(d, 'winbad.wk1')
+    open(bad, 'wb').write(b'not a spreadsheet')
+    ui = FakeUI([])
+    check(wk1.run_windowed([plain], ui) == 0 and os.path.exists(os.path.join(d, 'win.csv')) and ui.infos, 'windowed: a dropped file')
+    ui = FakeUI([])
+    check(wk1.run_windowed(['--quiet', plain], ui) == 0 and not ui.infos, 'windowed: --quiet')
+    ui = FakeUI([])
+    check(wk1.run_windowed([bad, plain], ui) == 1 and ui.errors and 'winbad.wk1' in ui.errors[0], 'windowed: a bad file is reported')
+    ui = FakeUI([plain], save=os.path.join(d, 'win2.csv'))
+    check(wk1.run_windowed([], ui) == 0 and os.path.exists(os.path.join(d, 'win2.csv')), 'windowed: no files opens the dialogs')
+
+
 def check(cond, msg):
     if not cond:
         raise AssertionError(msg)
@@ -118,6 +188,8 @@ def main():
         wk1.convert(fsrc, out2, formulas=True)
         report = open(os.path.join(d, 'formulas.formulas.csv'), encoding='utf-8-sig').read().splitlines()
         check(len(report) == len(FORMULAS) + 1 and report[1].startswith('A1,42,=A1+(B1*2),'), 'formula list: %r' % (report[:2],))
+        check_gui(d)
+        check_windowed(d)
     print('ok')
 
 

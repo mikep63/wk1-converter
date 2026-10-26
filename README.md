@@ -8,10 +8,15 @@ python wk1.py in.WK1 out.csv
 python wk1.py in.WK1 out.xlsx
 ```
 
-## Windows program, no Python needed
+## Windows programs, no Python needed
 
-`wk1-converter.exe` is the same program bundled with its own Python runtime (about 9 MB). Drag one or more `.WK1` files
-onto it, or run it from a command prompt:
+Two programs, the same code bundled with its own Python runtime (about 12 MB each):
+
+- **`wk1-converter-gui.exe`**: double-click it. A file picker (filtered to WK1 files) opens, then a Save As box for the
+  output name and type (csv or xlsx). Pick several files and it asks for a folder instead. If the file has formulas it asks
+  whether to write them. There is no black console window. Dropping files onto it converts them next to themselves and
+  shows a short message.
+- **`wk1-converter.exe`**: for a command prompt or a script:
 
 ```
 wk1-converter in.WK1                  writes in.csv next to it
@@ -20,10 +25,10 @@ wk1-converter --xlsx a.WK1 b.WK1
 ```
 
 The Releases page has a build made by the workflow in `.github/workflows/build.yml` from the code in this
-repository. Build it yourself with `build.bat` (needs Python once, on the build machine; it installs PyInstaller and openpyxl into a
-`.venv` folder here and writes `dist\wk1-converter.exe`). The exe is not stored in the repository: download it from the
-Releases page, or build it. Single-file programs made with PyInstaller are sometimes flagged by antivirus software; if
-yours does, build it from the source above.
+repository. Build them yourself with `build.bat` (needs Python once, on the build machine; it installs PyInstaller and openpyxl into a
+`.venv` folder here and writes both exes to `dist\`). The exes are not stored in the repository: download them from the
+Releases page, or build them. Single-file programs made with PyInstaller are sometimes flagged by antivirus software; if
+yours does, build them from the source above.
 
 From Python:
 

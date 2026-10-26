@@ -23,20 +23,28 @@ jobs:
         run: python -m pip install --upgrade pip pyinstaller openpyxl
       - name: Test
         run: python test_wk1.py
-      - name: Build the exe
-        run: python -m PyInstaller --onefile --console --name wk1-converter --clean --noconfirm wk1.py
-      - name: Smoke test the exe
+      - name: Build the exes
+        run: |
+          python -m PyInstaller --onefile --console --name wk1-converter --clean --noconfirm wk1.py
+          python -m PyInstaller --onefile --windowed --name wk1-converter-gui --noconfirm wk1.py
+      - name: Smoke test the exes
         run: |
           python -c "import test_wk1; open('smoke.wk1', 'wb').write(test_wk1.sample())"
           .\dist\wk1-converter.exe smoke.wk1
           if ($LASTEXITCODE -ne 0) { exit 1 }
           if (-not (Select-String -Path smoke.csv -Pattern 'Abbott' -Quiet)) { throw 'smoke.csv has no data' }
+          Remove-Item smoke.csv
+          $p = Start-Process .\dist\wk1-converter-gui.exe -ArgumentList '--quiet','smoke.wk1' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { exit 1 }
+          if (-not (Select-String -Path smoke.csv -Pattern 'Abbott' -Quiet)) { throw 'the gui exe wrote no data' }
       - uses: actions/upload-artifact@v4
         with:
           name: wk1-converter-windows
-          path: dist/wk1-converter.exe
+          path: dist/*.exe
       - name: Attach to the release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/wk1-converter.exe
+          files: |
+            dist/wk1-converter.exe
+            dist/wk1-converter-gui.exe

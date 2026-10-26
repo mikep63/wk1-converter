@@ -212,6 +212,8 @@ def convert(src, out=None, fmt='csv', formulas=False):
     out = out or os.path.splitext(src)[0] + '.' + fmt
     found = {} if formulas else None
     g = grid(src, found)
+    if not g:
+        raise ValueError('%s has no cells; is it a Lotus WK1 file?' % os.path.basename(src))
     write(g, out)
     print('%s: %d rows x %d columns -> %s' % (src, len(g), len(g[0]) if g else 0, out))
     if formulas:
@@ -229,6 +231,82 @@ def convert(src, out=None, fmt='csv', formulas=False):
     return out
 
 
+class TkUI:
+    """The Windows dialogs: pick the file or files, say where to save, and a short message at the end."""
+
+    def __init__(self):
+        import tkinter
+        from tkinter import filedialog, messagebox
+        self.fd, self.mb = filedialog, messagebox
+        self.root = tkinter.Tk()
+        self.root.withdraw()
+        try:
+            self.root.attributes('-topmost', True)       # so the dialogs open in front of other windows
+        except tkinter.TclError:
+            pass
+
+    def open_files(self):
+        return list(self.fd.askopenfilenames(
+            parent=self.root, title='Choose Lotus WK1 file(s) to convert',
+            filetypes=[('Lotus 1-2-3 WK1', '*.wk1 *.WK1'), ('All files', '*.*')]))
+
+    def save_as(self, initialfile):
+        return self.fd.asksaveasfilename(
+            parent=self.root, title='Save as', initialfile=initialfile, defaultextension='.csv',
+            filetypes=[('CSV (opens in Excel)', '*.csv'), ('Excel workbook', '*.xlsx')])
+
+    def folder(self):
+        return self.fd.askdirectory(parent=self.root, title='Choose the folder to save the converted files in')
+
+    def yes_no(self, title, text):
+        return self.mb.askyesno(title, text, parent=self.root)
+
+    def info(self, text):
+        self.mb.showinfo('wk1-converter', text, parent=self.root)
+
+    def error(self, text):
+        self.mb.showerror('wk1-converter', text, parent=self.root)
+
+
+def gui(ui=None):
+    """Ask which WK1 files to convert and where to save them, with dialog boxes. Returns an exit code."""
+    ui = ui or TkUI()
+    paths = ui.open_files()
+    if not paths:
+        return 0
+    try:
+        with_formulas = False
+        n = 0
+        for src in paths:
+            found = {}
+            read(src, found)
+            n += len(found)
+        if n and ui.yes_no('Formulas found', '%d formula cell(s) found.\n\nWrite them as formulas (experimental)?\n'
+                           'Yes: formulas where they can be read, the stored value where not, and a list of every '
+                           'formula next to the output.\nNo: the values Lotus stored.' % n):
+            with_formulas = True
+        if len(paths) == 1:
+            out = ui.save_as(os.path.splitext(os.path.basename(paths[0]))[0] + '.csv')
+            if not out:
+                return 0
+            outs = [(paths[0], out)]
+        else:
+            folder = ui.folder()
+            if not folder:
+                return 0
+            ext = 'xlsx' if ui.yes_no('Output type', 'Save the %d files as Excel workbooks (.xlsx)?\n\nNo: csv files.' % len(paths)) else 'csv'
+            outs = [(p, os.path.join(folder, os.path.splitext(os.path.basename(p))[0] + '.' + ext)) for p in paths]
+        for src, out in outs:
+            convert(src, out, formulas=with_formulas)
+    except Exception as e:             # a file that is not a WK1 file, a locked output, and so on
+        ui.error('%s' % e)
+        return 1
+    ui.info('Saved:\n' + '\n'.join(out for _, out in outs))
+    return 0
+
+
+GUI_USED = False
+
 USAGE = """wk1-converter: Lotus 1-2-3 .WK1 to csv or xlsx
 
   wk1-converter in.WK1                  writes in.csv next to it
@@ -239,12 +317,17 @@ USAGE = """wk1-converter: Lotus 1-2-3 .WK1 to csv or xlsx
                                         writes formulas (real formulas in xlsx, =SUM(A1:A3) text in csv) where they
                                         can be read, and a list of every formula next to the output
 
-You can also drag one or more .WK1 files onto the program.
+You can also drag one or more .WK1 files onto the program. To choose files in dialog boxes use --gui, or
+double-click wk1-converter-gui.exe (the same program without the black console window).
 """
 
 
 def main(argv):
     args = [a for a in argv if not a.startswith('--')]
+    if '--gui' in argv:
+        global GUI_USED
+        GUI_USED = True
+        return gui()
     fmt = 'xlsx' if '--xlsx' in argv else 'csv'
     formulas = '--formulas' in argv
     if not args:
@@ -257,15 +340,39 @@ def main(argv):
     for src in args:
         try:
             convert(src, None, fmt, formulas)
-        except (OSError, struct.error) as e:
+        except (OSError, ValueError, struct.error) as e:
             print('%s: %s' % (src, e))
             status = 1
     return status
 
 
+def run_windowed(argv, ui=None):
+    """The no-console build (wk1-converter-gui.exe): dialog boxes with no files named, or the files dropped on it
+    converted next to themselves, with a message box for the result (--quiet leaves the message out)."""
+    paths = [a for a in argv if not a.startswith('--')]
+    if not paths:
+        return gui(ui)
+    ui = ui or TkUI()
+    fmt = 'xlsx' if '--xlsx' in argv else 'csv'
+    done, failed = [], []
+    for src in paths:
+        try:
+            done.append(convert(src, None, fmt, '--formulas' in argv))
+        except (OSError, ValueError, struct.error) as e:
+            failed.append('%s: %s' % (os.path.basename(src), e))
+    if '--quiet' not in argv:
+        if failed:
+            ui.error('\n'.join(failed))
+        else:
+            ui.info('Saved:\n' + '\n'.join(done))
+    return 1 if failed else 0
+
+
 if __name__ == '__main__':
+    if sys.stdout is None:                  # started without a console (the windowed build)
+        sys.exit(run_windowed(sys.argv[1:]))
     code = main(sys.argv[1:])
-    if getattr(sys, 'frozen', False) and (len(sys.argv) < 2 or code):      # opened by a double click or failed: keep the window
+    if getattr(sys, 'frozen', False) and not GUI_USED and (len(sys.argv) < 2 or code):      # failed, or opened without the dialogs: keep the window
         try:
             input('Press Enter to close ')
         except (EOFError, RuntimeError):      # no keyboard attached (a script, or a build runner)

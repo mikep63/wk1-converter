@@ -49,7 +49,11 @@ Formulas (done, experimental)
   are encoded, so this is the first thing to learn from a real file.
 - Still needed: at least one real WK1 file with formulas, to check the decoder against. Until then it stays experimental.
 
-Windows exe: `build.bat` builds `dist\wk1-converter.exe` with PyInstaller in a local `.venv` (9.4 MB, tested on real files: csv identical to the Python output).
+Two Windows exes (`build.bat`): `wk1-converter.exe` (console, command line) and `wk1-converter-gui.exe` (PyInstaller --windowed, no console;
+double-click opens file dialogs filtered to WK1, with Save As for csv or xlsx; dropped files convert next to themselves, `--quiet` leaves out the
+message box). Hiding the console of a console exe does not work under Windows Terminal, which is why there are two. Dialog flow is covered by
+`test_wk1.py` with a stand-in for the dialogs; the real dialog was checked by launching the exe and listing its windows (one visible: the file picker).
+Earlier note: `build.bat` builds `dist\wk1-converter.exe` with PyInstaller in a local `.venv` (9.4 MB, tested on real files: csv identical to the Python output).
 The exe is not committed. `.github/workflows/build.yml` runs the tests on every push and, for a tag such as `v0.1.0`, builds the exe on windows-latest and attaches it to the Release. It has not run yet (written 25 Oct 2026); expect to fix a step or two the first time.
 
 Do not put third-party data files in the repository (the .gitignore excludes wk1, wks, csv, xlsx).
