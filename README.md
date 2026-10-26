@@ -33,7 +33,7 @@ python test_wk1.py
 ```
 
 The test writes its own small WK1 file from the record layout, so the repository holds no one else's data. The reader was
-also checked on real files: 22 WK1 files written in the 1990s and 2000s (about 190,000 cells) and, for four of them, every
+also checked on real files: 22 WK1 files written between 1997 and 2014, and, for four of them, every
 value against a text export of the same data made by the program that wrote them: 27,216 values compared, none different.
 
 ## File format, briefly
