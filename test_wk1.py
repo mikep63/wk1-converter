@@ -182,6 +182,34 @@ def check_window(d):
         root.destroy()
 
 
+def check_site(d):
+    """The website builder: the page carries the program's version and every change in CHANGELOG.md, and refuses to build when they disagree."""
+    import html
+    import build_site
+    out = os.path.join(d, 'site')
+    page = build_site.build(out)
+    check(os.path.exists(os.path.join(out, 'index.html')) and os.path.exists(os.path.join(out, 'screenshot.png')), 'site: index.html and the screenshot are written')
+    check('Version %s' % wk1.__version__ in page and '{{' not in page, 'site: shows the version and no placeholder is left')
+    entries = build_site.parse_changelog(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'CHANGELOG.md'), encoding='utf-8').read())
+    check(entries and entries[0][0] == wk1.__version__ and all(items for _, _, items in entries), 'site: CHANGELOG.md starts at the current version and every version lists changes')
+    for version, date, items in entries:
+        check('Version %s' % version in page and html.escape(date) in page, 'site: version %s and its date are on the page' % version)
+        for item in items:
+            plain = item.replace('`', '')
+            check(html.escape(plain, quote=False) in page.replace('<code>', '').replace('</code>', ''), 'site: a change is missing from the page: %s' % item[:50])
+    check(build_site.LATEST + 'wk1-converter-gui.exe' in page and build_site.LATEST + 'wk1-converter.exe' in page, 'site: both download links point at the latest release')
+    check('https://' not in page.replace('https://github.com/mikep63/wk1-converter', ''), 'site: no other web address, fonts or scripts are loaded')
+    real = build_site.read_version
+    build_site.read_version = lambda: '9.9.9'
+    try:
+        build_site.build(os.path.join(d, 'site2'))
+        check(False, 'site: a version missing from CHANGELOG.md must stop the build')
+    except SystemExit:
+        pass
+    finally:
+        build_site.read_version = real
+
+
 def check(cond, msg):
     if not cond:
         raise AssertionError(msg)
@@ -225,6 +253,7 @@ def main():
         check(len(report) == len(FORMULAS) + 1 and report[1].startswith('A1,42,=A1+(B1*2),'), 'formula list: %r' % (report[:2],))
         check_convert_mode(d)
         check_window(d)
+        check_site(d)
     print('ok')
 
 

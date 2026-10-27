@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>wk1-converter</title>
+<meta name="description" content="Open old Lotus 1-2-3 (.WK1) spreadsheets, look through them, and save them as CSV or Excel files. A free Windows program.">
+<style>
+:root {
+  --bg: #f6f7f4; --panel: #ffffff; --fg: #1d2421; --muted: #5a6560; --line: #dfe3dd;
+  --accent: #1f6b52; --accent-fg: #ffffff; --accent-soft: #e4f1ec; --code: #eef0eb;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131815; --panel: #1b221e; --fg: #e8ece8; --muted: #a2aea7; --line: #2b3530;
+    --accent: #5fc19b; --accent-fg: #0d1f17; --accent-soft: #1e3028; --code: #232c27; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131815; --panel: #1b221e; --fg: #e8ece8; --muted: #a2aea7; --line: #2b3530;
+  --accent: #5fc19b; --accent-fg: #0d1f17; --accent-soft: #1e3028; --code: #232c27; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.6 "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  padding: 0 max(16px, env(safe-area-inset-right, 0px)) 48px max(16px, env(safe-area-inset-left, 0px));
+}
+main { max-width: 46rem; margin: 0 auto; }
+header { padding: 56px 0 8px; }
+.nb { white-space: nowrap; }
+.mark { font: 600 0.8rem/1 ui-monospace, "Cascadia Mono", Consolas, monospace; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+h1 { font-size: clamp(2rem, 6vw, 2.8rem); line-height: 1.15; margin: 10px 0 12px; letter-spacing: -0.01em; text-wrap: balance; }
+.lede { font-size: 1.15rem; color: var(--muted); margin: 0 0 24px; max-width: 38rem; }
+.download { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 8px 0 8px; }
+.button {
+  display: inline-block; background: var(--accent); color: var(--accent-fg); text-decoration: none;
+  font-weight: 600; padding: 13px 22px; border-radius: 8px; border: 2px solid var(--accent);
+}
+.button:hover, .button:focus-visible { filter: brightness(1.08); outline: 3px solid var(--accent-soft); outline-offset: 2px; }
+.button.second { background: transparent; color: var(--accent); }
+.meta { color: var(--muted); font-size: 0.92rem; margin: 6px 0 0; }
+section { margin-top: 44px; }
+h2 { font-size: 1.3rem; margin: 0 0 12px; letter-spacing: -0.005em; }
+figure { margin: 8px 0 0; }
+figure img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; display: block; background: var(--panel); }
+figcaption { color: var(--muted); font-size: 0.88rem; margin-top: 8px; }
+ol, ul { padding-left: 1.3rem; margin: 0; }
+li { margin: 6px 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 22px; }
+.version { margin: 0 0 22px; }
+.version:last-child { margin-bottom: 0; }
+.version h3 { font-size: 1.02rem; margin: 0 0 4px; }
+.version h3 span { color: var(--muted); font-weight: 400; font-size: 0.9rem; margin-left: 8px; }
+.current { display: inline-block; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); background: var(--accent-soft); padding: 2px 8px; border-radius: 999px; margin-left: 8px; vertical-align: 2px; }
+code { background: var(--code); padding: 1px 6px; border-radius: 4px; font: 0.88em ui-monospace, "Cascadia Mono", Consolas, monospace; white-space: nowrap; }
+.note { color: var(--muted); font-size: 0.95rem; }
+footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.9rem; }
+a { color: var(--accent); }
+@media (max-width: 480px) { header { padding-top: 32px; } .button { width: 100%; text-align: center; } }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="mark">wk1-converter</div>
+  <h1>Open old Lotus <span class="nb">1-2-3</span> spreadsheets, look through them, then save them as CSV or Excel.</h1>
+  <p class="lede">Lotus saved its files as <code>.WK1</code>, which nothing opens any more. This free Windows program reads them, shows the whole sheet in a window you can scroll, and writes a file Excel can open. No Python needed.</p>
+  <div class="download">
+    <a class="button" href="{{download_gui}}">Download for Windows</a>
+    <a class="button second" href="{{download_cli}}">Command-line version</a>
+  </div>
+  <p class="meta">Version {{version}}, {{date}}. About 12 MB, a single file. <a href="{{releases}}">All releases</a></p>
+</header>
+
+<section>
+  <h2>What it looks like</h2>
+  <figure>
+    <img src="screenshot.png" alt="The wk1-converter window showing a spreadsheet of sample data in a grid, with File, View and Help menus above it and row numbers and column letters around the grid.">
+    <figcaption>The window with made-up sample data: row numbers down the side, column letters across the top, scroll bars both ways.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>How to use it</h2>
+  <ol>
+    <li>Double-click <code>wk1-converter-gui.exe</code>. If Windows asks, choose More info, then Run anyway: the program is not signed.</li>
+    <li>Choose <strong>File &gt; Open</strong> and pick a <code>.WK1</code> file. It appears in the window, so you can check it first.</li>
+    <li>Choose <strong>File &gt; Save As</strong> and pick CSV (opens in Excel) or Excel workbook. Nothing is written until you do.</li>
+  </ol>
+  <p class="note">You can also drop a <code>.WK1</code> file on the program to open it, select rows and press Ctrl+C to paste them into Excel, or use <strong>File &gt; Convert several files</strong> to save a whole folder at once.</p>
+</section>
+
+<section>
+  <h2>What it reads, and what it doesn't</h2>
+  <ul>
+    <li>Numbers, text and the last result Lotus stored for each formula cell.</li>
+    <li>Formulas themselves are experimental: <strong>View &gt; Show formulas</strong> decodes the ones where every part is understood, and keeps the stored value for the rest.</li>
+    <li>Number formats, dates, colours and column widths are not kept. Text is read as the DOS code page 437 that Lotus used.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Changes</h2>
+  <div class="card">
+{{changes}}
+  </div>
+</section>
+
+<footer>
+  wk1-converter is free software under the MIT License. The WK1 file layout follows Lotus's public file-format specification.
+  <a href="{{repo_url}}">Source and issues</a>
+</footer>
+</main>
+</body>
+</html>

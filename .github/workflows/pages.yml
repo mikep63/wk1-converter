@@ -1,0 +1,38 @@
+name: website
+
+# Builds the one-page website (build_site.py: site/index.html with the version, date and changes from CHANGELOG.md and wk1.py) and publishes it
+# with GitHub Pages. It runs when a Release is published and when started by hand (Actions > website > Run workflow), not on every push.
+# Needs GitHub Pages switched on first: Settings > Pages > Source: GitHub Actions (and the repository public, unless the plan allows private Pages).
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build the page
+        run: python build_site.py
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -103,3 +103,22 @@ Values: tested on real files. Formulas: experimental, see above. `NOTES.md` has 
 ## Licence
 
 MIT.
+
+## The website
+
+`site/index.html` is a one-page website: what the program does, a screenshot, a Download button, the current version and the list of changes.
+`python build_site.py` fills in the version (from `__version__` in `wk1.py`), its date and every entry of `CHANGELOG.md`, and writes the finished page to
+`_site/`. The two buttons point at the newest GitHub Release (`.../releases/latest/download/wk1-converter-gui.exe` and `wk1-converter.exe`), so they work
+once a version has been released. The screenshot uses made-up sample data (no one else's files).
+
+To publish a new version:
+
+1. Change `__version__` in `wk1.py` and add an entry at the top of `CHANGELOG.md` (`## 0.3.0 - 12 November 2026`, then one `- ` line per change).
+   `python test_wk1.py` fails if the two disagree.
+2. Commit and push, then tag the version (`git tag v0.3.0` and `git push origin v0.3.0`). The `build` workflow tests and builds both exes and attaches
+   them to a Release.
+3. Publishing the Release runs the `website` workflow, which rebuilds the page and publishes it with GitHub Pages. It can also be started by hand
+   from the Actions tab.
+
+One-time setup: Settings > Pages > Source: GitHub Actions. GitHub Pages sites are public to the whole internet, and Pages for a private repository needs a
+paid plan, so on a free account the repository has to be made public first (Settings > General > Danger Zone > Change visibility).

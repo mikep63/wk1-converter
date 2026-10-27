@@ -63,3 +63,5 @@ Earlier note: `build.bat` builds `dist\wk1-converter.exe` with PyInstaller in a 
 The exe is not committed. `.github/workflows/build.yml` runs the tests on every push and, for a tag such as `v0.1.0`, builds the exe on windows-latest and attaches it to the Release. It has not run yet (written 25 Oct 2026); expect to fix a step or two the first time.
 
 Do not put third-party data files in the repository (the .gitignore excludes wk1, wks, csv, xlsx).
+
+Website (27 Oct 2026): `site/index.html` + `build_site.py` (fills version, date and changes from `wk1.py` and `CHANGELOG.md`, writes `_site/`), `site/screenshot.png` (made-up data, taken with a PrintWindow script, no Strat data), `.github/workflows/pages.yml` (runs on a published Release or by hand; needs Pages > Source: GitHub Actions, and a public repo on a free plan). Not published: the repo is still private and no version is tagged yet, so the download buttons have nothing to point at until `v0.2.0` is tagged and released. `test_wk1.py` checks the page against the changelog and the version.

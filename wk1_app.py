@@ -62,7 +62,6 @@ class App:
         except tkinter.TclError:
             pass
         style.configure('Grid.Treeview', rowheight=20)
-        style.configure('Grid.Treeview.Heading', font=tkfont.nametofont('TkDefaultFont').copy())
 
         bar = tkinter.Menu(root)
         filemenu = tkinter.Menu(bar, tearoff=False)
