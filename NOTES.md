@@ -49,9 +49,15 @@ Formulas (done, experimental)
   are encoded, so this is the first thing to learn from a real file.
 - Still needed: at least one real WK1 file with formulas, to check the decoder against. Until then it stays experimental.
 
-Two Windows exes (`build.bat`): `wk1-converter.exe` (console, command line) and `wk1-converter-gui.exe` (PyInstaller --windowed, no console;
-double-click opens file dialogs filtered to WK1, with Save As for csv or xlsx; dropped files convert next to themselves, `--quiet` leaves out the
-message box). Hiding the console of a console exe does not work under Windows Terminal, which is why there are two. Dialog flow is covered by
+Two Windows exes (`build.bat`): `wk1-converter.exe` (console, command line) and `wk1-converter-gui.exe` (PyInstaller --windowed, no console).
+Since 0.2.0 the gui exe opens a window (`wk1_app.py`, tkinter): File > Open shows the file in a scrollable Treeview grid before anything is saved,
+File > Save As writes csv or xlsx, File > Convert several files does a batch, View > Show formulas (experimental), Help > About; a file named on the
+command line or dropped on the exe opens in the window. `--convert [--quiet]` keeps the old no-window conversion next to the file (the workflow's
+smoke test uses it). `wk1_app.run(core, paths)` takes the reader module as an argument because the exe's entry script is `wk1.py` itself
+(importing `wk1` from inside would load a second copy, or fail in the exe); the workflow and `build.bat` add `--hidden-import wk1_app`.
+A one-file PyInstaller exe starts a second process that owns the window, so check its title across the processes of that name, not the one started.
+The window's grid is a ttk.Treeview filled 250 rows per pass (a 8,000-row file does not freeze it); it is a viewer only, no editing.
+The window tests in `test_wk1.py` answer the file dialogs in advance and skip when there is no display. Hiding the console of a console exe does not work under Windows Terminal, which is why there are two. Dialog flow is covered by
 `test_wk1.py` with a stand-in for the dialogs; the real dialog was checked by launching the exe and listing its windows (one visible: the file picker).
 Earlier note: `build.bat` builds `dist\wk1-converter.exe` with PyInstaller in a local `.venv` (9.4 MB, tested on real files: csv identical to the Python output).
 The exe is not committed. `.github/workflows/build.yml` runs the tests on every push and, for a tag such as `v0.1.0`, builds the exe on windows-latest and attaches it to the Release. It has not run yet (written 25 Oct 2026); expect to fix a step or two the first time.

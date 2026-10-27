@@ -18,6 +18,8 @@ import os
 import struct
 import sys
 
+__version__ = '0.2.0'
+
 CELLS = {0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x33}
 
 
@@ -231,78 +233,24 @@ def convert(src, out=None, fmt='csv', formulas=False):
     return out
 
 
-class TkUI:
-    """The Windows dialogs: pick the file or files, say where to save, and a short message at the end."""
-
-    def __init__(self):
-        import tkinter
-        from tkinter import filedialog, messagebox
-        self.fd, self.mb = filedialog, messagebox
-        self.root = tkinter.Tk()
-        self.root.withdraw()
-        try:
-            self.root.attributes('-topmost', True)       # so the dialogs open in front of other windows
-        except tkinter.TclError:
-            pass
-
-    def open_files(self):
-        return list(self.fd.askopenfilenames(
-            parent=self.root, title='Choose Lotus WK1 file(s) to convert',
-            filetypes=[('Lotus 1-2-3 WK1', '*.wk1 *.WK1'), ('All files', '*.*')]))
-
-    def save_as(self, initialfile):
-        return self.fd.asksaveasfilename(
-            parent=self.root, title='Save as', initialfile=initialfile, defaultextension='.csv',
-            filetypes=[('CSV (opens in Excel)', '*.csv'), ('Excel workbook', '*.xlsx')])
-
-    def folder(self):
-        return self.fd.askdirectory(parent=self.root, title='Choose the folder to save the converted files in')
-
-    def yes_no(self, title, text):
-        return self.mb.askyesno(title, text, parent=self.root)
-
-    def info(self, text):
-        self.mb.showinfo('wk1-converter', text, parent=self.root)
-
-    def error(self, text):
-        self.mb.showerror('wk1-converter', text, parent=self.root)
-
-
-def gui(ui=None):
-    """Ask which WK1 files to convert and where to save them, with dialog boxes. Returns an exit code."""
-    ui = ui or TkUI()
-    paths = ui.open_files()
-    if not paths:
-        return 0
+def message_box(kind, text):
+    """A message box with no other window (used by the no-console build when it converts files without showing the window)."""
+    import tkinter
+    from tkinter import messagebox
+    root = tkinter.Tk()
+    root.withdraw()
     try:
-        with_formulas = False
-        n = 0
-        for src in paths:
-            found = {}
-            read(src, found)
-            n += len(found)
-        if n and ui.yes_no('Formulas found', '%d formula cell(s) found.\n\nWrite them as formulas (experimental)?\n'
-                           'Yes: formulas where they can be read, the stored value where not, and a list of every '
-                           'formula next to the output.\nNo: the values Lotus stored.' % n):
-            with_formulas = True
-        if len(paths) == 1:
-            out = ui.save_as(os.path.splitext(os.path.basename(paths[0]))[0] + '.csv')
-            if not out:
-                return 0
-            outs = [(paths[0], out)]
-        else:
-            folder = ui.folder()
-            if not folder:
-                return 0
-            ext = 'xlsx' if ui.yes_no('Output type', 'Save the %d files as Excel workbooks (.xlsx)?\n\nNo: csv files.' % len(paths)) else 'csv'
-            outs = [(p, os.path.join(folder, os.path.splitext(os.path.basename(p))[0] + '.' + ext)) for p in paths]
-        for src, out in outs:
-            convert(src, out, formulas=with_formulas)
-    except Exception as e:             # a file that is not a WK1 file, a locked output, and so on
-        ui.error('%s' % e)
-        return 1
-    ui.info('Saved:\n' + '\n'.join(out for _, out in outs))
-    return 0
+        root.attributes('-topmost', True)
+    except tkinter.TclError:
+        pass
+    (messagebox.showerror if kind == 'error' else messagebox.showinfo)('wk1-converter', text, parent=root)
+    root.destroy()
+
+
+def window(paths=()):
+    """The program window (wk1_app.py): open a file, look through it, save it. Returns an exit code."""
+    import wk1_app
+    return wk1_app.run(sys.modules[__name__], paths)
 
 
 GUI_USED = False
@@ -317,8 +265,9 @@ USAGE = """wk1-converter: Lotus 1-2-3 .WK1 to csv or xlsx
                                         writes formulas (real formulas in xlsx, =SUM(A1:A3) text in csv) where they
                                         can be read, and a list of every formula next to the output
 
-You can also drag one or more .WK1 files onto the program. To choose files in dialog boxes use --gui, or
-double-click wk1-converter-gui.exe (the same program without the black console window).
+You can also drag one or more .WK1 files onto the program. To open the window (look through a file, then save it) use --gui,
+or double-click wk1-converter-gui.exe (the same program without the black console window). wk1-converter-gui.exe with
+--convert in front of the file names converts them next to themselves, with no window.
 """
 
 
@@ -327,7 +276,7 @@ def main(argv):
     if '--gui' in argv:
         global GUI_USED
         GUI_USED = True
-        return gui()
+        return window(args[:1])
     fmt = 'xlsx' if '--xlsx' in argv else 'csv'
     formulas = '--formulas' in argv
     if not args:
@@ -346,13 +295,12 @@ def main(argv):
     return status
 
 
-def run_windowed(argv, ui=None):
-    """The no-console build (wk1-converter-gui.exe): dialog boxes with no files named, or the files dropped on it
-    converted next to themselves, with a message box for the result (--quiet leaves the message out)."""
+def run_windowed(argv, box=message_box):
+    """The no-console build (wk1-converter-gui.exe): the window, with the first file named (or dropped on it) already showing. With
+    --convert the files named are converted next to themselves instead, with a message box for the result (--quiet leaves it out)."""
     paths = [a for a in argv if not a.startswith('--')]
-    if not paths:
-        return gui(ui)
-    ui = ui or TkUI()
+    if '--convert' not in argv:
+        return window(paths[:1])
     fmt = 'xlsx' if '--xlsx' in argv else 'csv'
     done, failed = [], []
     for src in paths:
@@ -362,9 +310,9 @@ def run_windowed(argv, ui=None):
             failed.append('%s: %s' % (os.path.basename(src), e))
     if '--quiet' not in argv:
         if failed:
-            ui.error('\n'.join(failed))
+            box('error', '\n'.join(failed))
         else:
-            ui.info('Saved:\n' + '\n'.join(done))
+            box('info', 'Saved:\n' + '\n'.join(done))
     return 1 if failed else 0
 
 

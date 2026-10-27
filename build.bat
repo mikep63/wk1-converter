@@ -9,7 +9,7 @@ if not exist .venv (
 call .venv\Scripts\python -m pip install --quiet --upgrade pip || exit /b 1
 call .venv\Scripts\python -m pip install --quiet pyinstaller openpyxl || exit /b 1
 call .venv\Scripts\python test_wk1.py || exit /b 1
-call .venv\Scripts\python -m PyInstaller --onefile --console --name wk1-converter --clean --noconfirm wk1.py || exit /b 1
-call .venv\Scripts\python -m PyInstaller --onefile --windowed --name wk1-converter-gui --noconfirm wk1.py || exit /b 1
+call .venv\Scripts\python -m PyInstaller --onefile --console --hidden-import wk1_app --name wk1-converter --clean --noconfirm wk1.py || exit /b 1
+call .venv\Scripts\python -m PyInstaller --onefile --windowed --hidden-import wk1_app --name wk1-converter-gui --noconfirm wk1.py || exit /b 1
 echo.
-echo Built dist\wk1-converter.exe (command line) and dist\wk1-converter-gui.exe (double-click, dialog boxes)
+echo Built dist\wk1-converter.exe (command line) and dist\wk1-converter-gui.exe (double-click: a window to open, look through and save a file)

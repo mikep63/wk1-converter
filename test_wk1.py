@@ -77,74 +77,109 @@ def sample():
     ])
 
 
-class FakeUI:
-    """Stands in for the dialog boxes: answers are given up front, and every message is kept."""
+class FakeBox:
+    """Stands in for the message box of the no-console --convert mode: every message is kept."""
 
-    def __init__(self, files, save=None, folder=None, yes=()):
-        self.files, self.save, self.folder_, self.yes = files, save, folder, list(yes)
-        self.asked, self.infos, self.errors = [], [], []
+    def __init__(self):
+        self.messages = []
 
-    def open_files(self):
-        return self.files
-
-    def save_as(self, initialfile):
-        self.asked.append(initialfile)
-        return self.save
-
-    def folder(self):
-        return self.folder_
-
-    def yes_no(self, title, text):
-        self.asked.append(title)
-        return self.yes.pop(0)
-
-    def info(self, text):
-        self.infos.append(text)
-
-    def error(self, text):
-        self.errors.append(text)
+    def __call__(self, kind, text):
+        self.messages.append((kind, text))
 
 
-def check_gui(d):
-    plain, with_f = os.path.join(d, 'plain.wk1'), os.path.join(d, 'withf.wk1')
-    open(plain, 'wb').write(sample())
-    open(with_f, 'wb').write(formula_sample())
-    # one file, no formulas: only the Save As box, named after the file
-    ui = FakeUI([plain], save=os.path.join(d, 'g1.csv'))
-    check(wk1.gui(ui) == 0 and ui.asked == ['plain.csv'] and os.path.exists(os.path.join(d, 'g1.csv')) and ui.infos, 'gui: one file')
-    # formulas found and accepted: asked once, the list is written
-    ui = FakeUI([with_f], save=os.path.join(d, 'g2.xlsx'), yes=[True])
-    check(wk1.gui(ui) == 0 and ui.asked[0] == 'Formulas found' and os.path.exists(os.path.join(d, 'g2.formulas.csv')), 'gui: formulas')
-    # formulas found and declined: values only, no list
-    ui = FakeUI([with_f], save=os.path.join(d, 'g3.csv'), yes=[False])
-    check(wk1.gui(ui) == 0 and not os.path.exists(os.path.join(d, 'g3.formulas.csv')), 'gui: formulas declined')
-    # several files: a folder and an output type
-    os.makedirs(os.path.join(d, 'out'))
-    ui = FakeUI([plain, plain.replace('plain', 'plain')], folder=os.path.join(d, 'out'), yes=[False])
-    check(wk1.gui(ui) == 0 and os.path.exists(os.path.join(d, 'out', 'plain.csv')), 'gui: several files')
-    # cancelling at any box does nothing
-    for ui in (FakeUI([]), FakeUI([plain], save=''), FakeUI([plain, plain], folder='')):
-        check(wk1.gui(ui) == 0 and not ui.infos and not ui.errors, 'gui: cancel')
-    # a file that is not a WK1 file is reported, not raised
-    bad = os.path.join(d, 'bad.wk1')
-    open(bad, 'wb').write(b'not a spreadsheet')
-    ui = FakeUI([bad], save=os.path.join(d, 'g4.csv'))
-    check(wk1.gui(ui) == 1 and ui.errors and 'no cells' in ui.errors[0] and not ui.infos, 'gui: bad file is reported')
-
-
-def check_windowed(d):
+def check_convert_mode(d):
     plain = os.path.join(d, 'win.wk1')
     open(plain, 'wb').write(sample())
     bad = os.path.join(d, 'winbad.wk1')
     open(bad, 'wb').write(b'not a spreadsheet')
-    ui = FakeUI([])
-    check(wk1.run_windowed([plain], ui) == 0 and os.path.exists(os.path.join(d, 'win.csv')) and ui.infos, 'windowed: a dropped file')
-    ui = FakeUI([])
-    check(wk1.run_windowed(['--quiet', plain], ui) == 0 and not ui.infos, 'windowed: --quiet')
-    ui = FakeUI([])
-    check(wk1.run_windowed([bad, plain], ui) == 1 and ui.errors and 'winbad.wk1' in ui.errors[0], 'windowed: a bad file is reported')
-    ui = FakeUI([plain], save=os.path.join(d, 'win2.csv'))
-    check(wk1.run_windowed([], ui) == 0 and os.path.exists(os.path.join(d, 'win2.csv')), 'windowed: no files opens the dialogs')
+    box = FakeBox()
+    check(wk1.run_windowed(['--convert', plain], box) == 0 and os.path.exists(os.path.join(d, 'win.csv')) and box.messages[0][0] == 'info', 'convert mode: a file')
+    box = FakeBox()
+    check(wk1.run_windowed(['--convert', '--quiet', plain], box) == 0 and not box.messages, 'convert mode: --quiet')
+    box = FakeBox()
+    check(wk1.run_windowed(['--convert', bad, plain], box) == 1 and box.messages[0][0] == 'error' and 'winbad.wk1' in box.messages[0][1], 'convert mode: a bad file is reported')
+
+
+def check_window(d):
+    """The window itself, with the file dialogs answered in advance. Skipped where there is no display."""
+    import tkinter
+    import wk1_app
+    try:
+        root = tkinter.Tk()
+    except tkinter.TclError as e:
+        print('no display (%s): window tests skipped' % e)
+        return
+    root.withdraw()
+    try:
+        plain, with_f = os.path.join(d, 'plain.wk1'), os.path.join(d, 'withf.wk1')
+        open(plain, 'wb').write(sample())
+        open(with_f, 'wb').write(formula_sample())
+        app = wk1_app.App(wk1, root)
+        app.infos, app.errors = [], []
+        app.info = app.infos.append
+        app.error = app.errors.append
+        check(app.filemenu.entrycget('Save As...', 'state') == 'disabled' and app.status.get() == 'No file open', 'window: starts with nothing open and Save As off')
+        # opening shows the file and writes nothing
+        before = set(os.listdir(d))
+        check(app.open_path(plain), 'window: open')
+        app.wait_loaded()
+        rows = [app.tree.item(i, 'values') for i in app.tree.get_children()]
+        check(rows == [('1', 'Name', 'AB', 'AVG'), ('2', 'Abbott, K', '320', '0.297'), ('3', 'Caf\u00e9', '-4', '12')], 'window: rows %r' % (rows,))
+        check([app.tree.heading(c, 'text') for c in app.tree['columns']] == ['', 'A', 'B', 'C'], 'window: column letters')
+        check(str(app.tree.column('c0', 'anchor')) == 'w', 'window: a text column lines up on the left')
+        check(set(os.listdir(d)) == before, 'window: opening a file writes nothing')
+        check(app.filemenu.entrycget('Save As...', 'state') == 'normal' and 'plain.wk1' in app.root.title(), 'window: Save As is on and the title names the file')
+        check('3 rows x 3 columns (A to C)' in app.status.get(), 'window: status %r' % app.status.get())
+        # a file with more rows than one pass adds
+        big = os.path.join(d, 'big.wk1')
+        open(big, 'wb').write(b''.join(integer(r, 0, r) for r in range(wk1_app.CHUNK * 2 + 40)) + rec(0x01))
+        check(app.open_path(big), 'window: open a large file')
+        app.wait_loaded()
+        check(len(app.tree.get_children()) == wk1_app.CHUNK * 2 + 40, 'window: all %d rows shown, got %d' % (wk1_app.CHUNK * 2 + 40, len(app.tree.get_children())))
+        check(str(app.tree.column('c0', 'anchor')) == 'e', 'window: a column of numbers lines up on the right')
+        # formulas: values by default, the decoded text when View > Show formulas is on
+        app.open_path(with_f)
+        app.wait_loaded()
+        check(app.tree.item(app.tree.get_children()[2], 'values')[1] == '42' and 'formula cell' in app.status.get(), 'window: formula cells show their value')
+        app.show_formulas.set(True)
+        app.reload()
+        app.wait_loaded()
+        shown = [app.tree.item(i, 'values')[1] for i in app.tree.get_children()]
+        check(any(v.startswith('=') for v in shown), 'window: formulas shown as text %r' % (shown,))
+        app.show_formulas.set(False)
+        # Save As: csv and xlsx, named by the dialog; cancelling writes nothing
+        app.open_path(plain)
+        app.wait_loaded()
+        app.ask_save = lambda initialfile: os.path.join(d, 'saved.csv')
+        app.save_dialog()
+        text = open(os.path.join(d, 'saved.csv'), encoding='utf-8-sig').read().splitlines()
+        check(text == ['Name,AB,AVG', '"Abbott, K",320,0.297', 'Caf\u00e9,-4,12'] and app.infos and not app.errors, 'window: save csv %r' % (text,))
+        app.ask_save = lambda initialfile: ''
+        n = len(os.listdir(d))
+        app.save_dialog()
+        check(len(os.listdir(d)) == n, 'window: cancelling Save As writes nothing')
+        # a file that is not a WK1 file is reported and leaves the open file showing
+        bad = os.path.join(d, 'bad.wk1')
+        open(bad, 'wb').write(b'not a spreadsheet')
+        check(not app.open_path(bad) and app.errors and 'no cells' in app.errors[-1] and app.path == plain, 'window: a bad file is reported and the open file stays')
+        # copying selected rows puts tab-separated text on the clipboard
+        kids = app.tree.get_children()
+        app.tree.selection_set(kids[1:])
+        app.copy_selection()
+        check(root.clipboard_get() == 'Abbott, K\t320\t0.297\nCaf\u00e9\t-4\t12', 'window: copy %r' % root.clipboard_get())
+        # several files at once, from the File menu
+        out = os.path.join(d, 'many')
+        os.makedirs(out)
+        app.ask_open_many = lambda: [plain, with_f]
+        app.ask_folder = lambda: out
+        app.yes_no = lambda title, text: False
+        app.batch_dialog()
+        check(os.path.exists(os.path.join(out, 'plain.csv')) and os.path.exists(os.path.join(out, 'withf.csv')), 'window: convert several files')
+        # About names the program and its version
+        app.about()
+        check(app.infos[-1].startswith('wk1-converter ' + wk1.__version__) and 'MIT' in app.infos[-1], 'window: about')
+    finally:
+        root.destroy()
 
 
 def check(cond, msg):
@@ -188,8 +223,8 @@ def main():
         wk1.convert(fsrc, out2, formulas=True)
         report = open(os.path.join(d, 'formulas.formulas.csv'), encoding='utf-8-sig').read().splitlines()
         check(len(report) == len(FORMULAS) + 1 and report[1].startswith('A1,42,=A1+(B1*2),'), 'formula list: %r' % (report[:2],))
-        check_gui(d)
-        check_windowed(d)
+        check_convert_mode(d)
+        check_window(d)
     print('ok')
 
 

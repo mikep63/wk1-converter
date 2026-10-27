@@ -12,10 +12,14 @@ python wk1.py in.WK1 out.xlsx
 
 Two programs, the same code bundled with its own Python runtime (about 12 MB each):
 
-- **`wk1-converter-gui.exe`**: double-click it. A file picker (filtered to WK1 files) opens, then a Save As box for the
-  output name and type (csv or xlsx). Pick several files and it asks for a folder instead. If the file has formulas it asks
-  whether to write them. There is no black console window. Dropping files onto it converts them next to themselves and
-  shows a short message.
+- **`wk1-converter-gui.exe`**: double-click it. A window opens with **File**, **View** and **Help** menus. **File > Open** (Ctrl+O)
+  picks a WK1 file and shows it in a grid you can scroll in both directions (row numbers down the side, column letters across
+  the top), so you can look at it before anything is written. **File > Save As** (Ctrl+S) writes it as csv or xlsx.
+  **File > Convert several files** does a batch into one folder. **View > Show formulas (experimental)** shows the decoded
+  formulas where they can be read. **Help > About** names the version. Select rows and press Ctrl+C to copy them (tab separated,
+  ready to paste into Excel). Drop a WK1 file on the program (or give its name) and it opens in the window. There is no black
+  console window. With `--convert` in front of the file names (`wk1-converter-gui.exe --convert a.WK1 b.WK1`) it converts them next
+  to themselves with no window, and `--quiet` leaves out the message at the end.
 - **`wk1-converter.exe`**: for a command prompt or a script:
 
 ```
