@@ -199,6 +199,10 @@ def check_site(d):
             check(html.escape(plain, quote=False) in page.replace('<code>', '').replace('</code>', ''), 'site: a change is missing from the page: %s' % item[:50])
     check(build_site.LATEST + 'wk1-converter-gui.exe' in page and build_site.LATEST + 'wk1-converter.exe' in page, 'site: both download links point at the latest release')
     check('https://' not in page.replace('https://github.com/mikep63/wk1-converter', ''), 'site: no other web address, fonts or scripts are loaded')
+    check(os.path.exists(os.path.join(out, 'license.txt')) and os.path.exists(os.path.join(out, 'third-party-notices.txt')), 'site: the licence and the third-party notices are published')
+    check('license.txt' in page and 'third-party-notices.txt' in page, 'site: the footer links the licence and the notices')
+    notices = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'THIRD-PARTY-NOTICES.txt'), encoding='utf-8').read()
+    check(all(n in notices for n in ('openpyxl', 'et_xmlfile', 'Python Software Foundation', 'Tcl', 'PyInstaller', 'Bootloader Exception')), 'notices: every bundled package has its notice')
     real = build_site.read_version
     build_site.read_version = lambda: '9.9.9'
     try:

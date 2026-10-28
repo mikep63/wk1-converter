@@ -55,3 +55,5 @@ jobs:
           files: |
             dist/wk1-converter.exe
             dist/wk1-converter-gui.exe
+            LICENSE
+            THIRD-PARTY-NOTICES.txt

@@ -102,7 +102,8 @@ Values: tested on real files. Formulas: experimental, see above. `NOTES.md` has 
 
 ## Licence
 
-MIT.
+MIT (`LICENSE`). The Windows programs also contain openpyxl, Python, Tcl/Tk and PyInstaller, used under their own licences; their notices are in
+`THIRD-PARTY-NOTICES.txt`, which is attached to every Release and linked from the website. If a dependency is added or upgraded, rebuild that file.
 
 ## The website
 

@@ -23,7 +23,8 @@ The values Lotus stored are shown and saved. A formula cell keeps the last resul
 
 The WK1 layout follows Lotus's public file-format specification. Text is read as the DOS code page 437; number formats and dates are not kept.
 
-Released under the MIT License."""
+Released under the MIT License. It contains openpyxl, Python, Tcl/Tk and PyInstaller, used under their own licences: the notices are in
+THIRD-PARTY-NOTICES.txt, next to the download and on the website."""
 
 
 def cell_text(v):

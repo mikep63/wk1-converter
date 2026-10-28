@@ -3,9 +3,13 @@ name: website
 # Builds the one-page website (build_site.py: site/index.html with the version, date and changes from CHANGELOG.md and wk1.py) and publishes it
 # with GitHub Pages. It runs when a Release is published and when started by hand (Actions > website > Run workflow), not on every push.
 # Needs GitHub Pages switched on first: Settings > Pages > Source: GitHub Actions (and the repository public, unless the plan allows private Pages).
+# A Release made by the build workflow (with the built-in token) does not start other workflows, so the site also follows a finished build of a version tag.
 on:
   release:
     types: [published]
+  workflow_run:
+    workflows: [build]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -19,6 +23,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && startsWith(github.event.workflow_run.head_branch, 'v'))
     runs-on: ubuntu-latest
     environment:
       name: github-pages

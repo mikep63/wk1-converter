@@ -77,6 +77,8 @@ def build(out=OUT):
     for name in os.listdir(os.path.join(HERE, 'site')):
         if name != 'index.html':
             shutil.copy(os.path.join(HERE, 'site', name), os.path.join(out, name))
+    for src, dst in (('LICENSE', 'license.txt'), ('THIRD-PARTY-NOTICES.txt', 'third-party-notices.txt')):
+        shutil.copy(os.path.join(HERE, src), os.path.join(out, dst))
     print('wrote %s (version %s, %d versions listed)' % (os.path.join(out, 'index.html'), version, len(entries)))
     return page
 

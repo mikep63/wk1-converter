@@ -10,6 +10,7 @@ keep the top entry in step with the version number, with one short line per chan
 - View > Show formulas (experimental) shows the decoded formulas where they can be read.
 - Help > About shows the version. Ctrl+O opens, Ctrl+S saves, Ctrl+C copies selected rows for pasting into Excel.
 - A file named on the command line or dropped on the program opens in the window. `--convert` keeps the old no-window conversion.
+- The MIT licence and the notices for the software inside the program (`THIRD-PARTY-NOTICES.txt`) come with every download and are on the website.
 
 ## 0.1.0 - 25 October 2026
 
